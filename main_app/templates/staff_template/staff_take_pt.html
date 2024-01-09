@@ -1,0 +1,226 @@
+{% extends 'main_app/base.html' %}
+{% load static %}
+{% block page_title %}{{page_title}}{% endblock page_title %}
+{% block content %}
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <!-- general form elements -->
+                <div class="card card-dark">
+                    <div class="card-header">
+                        <h3 class="card-title">{{page_title}}</h3>
+                    </div>
+
+                    <!-- /.card-header -->
+                    <!-- form start -->
+                    <div class="card-body">
+
+
+
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select name="subject" class="form-control" id='subject'>
+                                <option value="">----</option>
+                                {% for subject in subjects  %}
+                                <option value="{{subject.id}}">{{subject.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+
+                        <div class="form-group">
+                            <label>Session Year</label>
+                            <select name="session" id='session' class="form-control">
+                                <option value="">----</option>
+                                {% for session in sessions  %}
+                                <option value="{{session.id}}">{{session}} </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% comment %}
+
+                        <div>
+                            <label>Attendance Date</label>
+                            <input type="date" class='form-control' name="attendance_date" id='attendance_date' id="">
+                        </div>
+                        {% endcomment %}
+
+                    </div>
+                    <!-- /.card-body -->
+
+                    <div class="card-footer">
+                        <button type="button" id='fetch_student' class="btn btn-success btn-block">Fetch Students</button>
+                        <div class="form-group" id="student_data">
+
+                        </div>
+                    </div>
+                </div>
+                <!-- /.card -->
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+
+{% block custom_js %}
+<script>
+
+    $(document).ready(function () {
+
+        // Function to create the editable table for PT meetings
+        function createPTMeetingTable(studentList) {
+            var tableHtml = "<table class='table'><thead><tr><th>Name</th><th>Query</th><th>Action</th><th>Date</th><th>Photo</th></tr></thead><tbody>";
+
+            for (var key in studentList) {
+                var studentId = studentList[key]['id'];
+                var studentName = studentList[key]['name'];
+
+                tableHtml += "<tr>";
+                tableHtml += "<td>" + studentName + "</td>";
+                tableHtml += "<td><input type='text' class='form-control' name='query_" + studentId + "'></td>";
+                tableHtml += "<td>";
+                tableHtml += "<select class='form-control' name='action_" + studentId + "'>";
+                tableHtml += "<option value='1'>Pending</option>";
+                tableHtml += "<option value='2'>Successful</option>";
+                tableHtml += "</select>";
+                tableHtml += "</td>";
+                tableHtml += "<td><input type='date' class='form-control' name='date_"+ studentId + "'>";
+                tableHtml += "<td><input type='file' class='form-control' name='photo_" + studentId + "' accept='image/*' required></td>";
+                tableHtml += "</tr>";
+            }
+
+            tableHtml += "</tbody></table>";
+            tableHtml += "<div class='form-group'><button id='savePTMeeting' class='btn btn-success' type='button'>Save PT Meeting</button></div>";
+
+            // Replace this line with the following code
+            $("#student_data").html(tableHtml);
+
+            // Attach a click event to the 'Save PT Meeting' button
+            $("#savePTMeeting").click(function () {
+                // var ptMeetingData = [];
+                var ptMeetingData = new FormData();
+                ptMeetingData.append('csrfmiddlewaretoken', "{{ csrf_token }}");
+
+                // Collect data for each student
+                studentList.forEach(function (student) {
+                    
+                    
+                    var studentId = student['id'];
+                    var query = $("input[name='query_" + studentId + "']").val();
+                    var action = $("select[name='action_" + studentId + "']").val();
+                    var date = $("input[name='date_" + studentId + "']").val(); 
+                    var photo = $("input[name='photo_" + studentId + "']")[0].files[0];
+                    if(!(query)){
+                        return
+                    }
+                    // Append data to FormData object
+                    ptMeetingData.append('studentId', studentId);
+                    ptMeetingData.append('query', query);
+                    ptMeetingData.append('action', action);
+                    ptMeetingData.append('date', date);
+                    console.log(photo);
+                    if (photo) {
+                        // Append the photo file if it exists
+                        ptMeetingData.append('photo', photo, photo.name);
+                    }
+                    
+                });
+
+                // Send the data to the server using AJAX
+                $.ajax({
+                url: "{% url 'save_pt_meeting' %}",
+                type: 'POST',
+                cache: false,
+                contentType: false,
+                processData: false,
+                data: ptMeetingData,
+                success: function (response) {
+                    console.log(response); // Log the response to the console
+                    if (response.status === 'OK') {
+                        alert("PT meeting data saved successfully.");
+                        $("#student_data").empty(); // Clear the content below the button
+                    } else {
+                        alert("Error saving PT meeting data. "+ response.message);
+                    }
+                },
+                error: function () {
+                    alert("An error occurred while sending data to the server.");
+                }
+            });
+          });
+        }
+        $("#fetch_student").click(function () {
+            var subject = $("#subject").val();
+            var session = $("#session").val();
+            $("#student_data").html(null);
+
+            if (subject.length == 0 || session.length == 0) {
+                alert("Please select session and subject");
+                return false;
+            }
+
+            $.ajax({
+                url: "{% url 'get_students' %}",
+                type: 'POST',
+                data: {
+                    subject: subject,
+                    session: session
+                }
+            }).done(function (response) {
+                var json_data = JSON.parse(response);
+                if (json_data.length < 1) {
+                    alert("No data to display");
+                } else {
+                    var tableHtml = createPTMeetingTable(json_data);
+                    $("#student_data").html(tableHtml);
+                }
+            }).fail(function (response) {
+                alert("Error in fetching students");
+            });
+        });
+        //REMOVE THIS
+        $(document).on('click', '#savePTMeeting___INVALID', function () {
+            var ptMeetingData = [];
+
+            $("input[name^='query_']").each(function () {
+                var studentId = $(this).attr('name').split('_')[1];
+                var query = $(this).val();
+                var actionPhoto = $("input[name='action_photo_" + studentId + "']").val();
+
+                ptMeetingData.push({
+                    studentId: studentId,
+                    query: query,
+                    actionPhoto: actionPhoto
+                });
+            });
+
+            $.ajax({
+                url: "{% url 'save_pt_meeting' %}",
+                type: 'POST',
+                data: {
+                    ptMeetingData: JSON.stringify(ptMeetingData),
+                    csrfmiddlewaretoken: "{{ csrf_token }}"
+                },
+                success: function (response) {
+                    if (response.status === 'OK') {
+                        alert("PT meeting data saved successfully.");
+                        $("#student_data").empty(); // Clear the content below the button
+                    } else {
+                        alert("Error saving PT meeting data. Please try again.");
+                    }
+                },
+                error: function () {
+                    alert("An error occurred while sending data to the server.");
+                }
+            });
+        });
+
+        // Your existing code...
+
+    });
+</script>
+{% endblock custom_js %}

@@ -1,0 +1,62 @@
+{% extends 'main_app/base.html' %}
+{% load static %}
+{% block page_title %}{{page_title}}{% endblock page_title %}
+{% block content %}
+<html>
+<head>
+    <title>PT Meeting Records</title>
+</head>
+<body>
+
+    <div class="card card-dark">
+        <div class="card-header"><h3 class="card-title">{{page_title}}</h3>
+        </div>
+       <div class="table p-2">
+    
+           <table class="table table-bordered">
+               <tr>
+                   <th>Name</th>
+                   <th>Query</th>
+                   <th>Suggestion</th>
+                   <th>Date</th>
+                   <th>Photo</th>
+            </tr>
+            {% for pt_meeting in pt_meetings %}
+                <tr>
+                    <td>{{ pt_meeting.student.name }}</td>
+                    <td>{{ pt_meeting.query }}</td>
+                    <td>{{ pt_meeting.get_action_display }}</td>
+                    <td>{{pt_meeting.get_date}}</td>
+                    <td><img src="{{ pt_meeting.get_image_url }}" alt="Photo" width="100"></td>
+                </tr>
+            {% endfor %}
+            </table>
+        </div>
+        </div>
+                </div>
+            </div>
+        </div>
+    <!-- <h1>PT Meeting Records</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Query</th>
+                <th>Action</th>
+                <th>Photo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pt_meeting in pt_meetings %}
+                <tr>
+                    <td>{{ pt_meeting.student.name }}</td>
+                    <td>{{ pt_meeting.query }}</td>
+                    <td>{{ pt_meeting.get_action_display }}</td>
+                    <td><img src="{{ pt_meeting.get_image_url }}" alt="Photo" width="100"></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table> -->
+</body>
+</html>
+{% endblock content %}
